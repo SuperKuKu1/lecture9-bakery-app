@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Home Bakery Orders: README</title>
+<style>
+  body { font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; color:#1f2a44; max-width:880px; margin:0 auto; padding:28px 22px 60px; }
+  h1 { color:#2647a8; margin-bottom:2px; } h2 { margin-top:32px; border-bottom:2px solid #e8edf7; padding-bottom:4px; }
+  table { border-collapse:collapse; width:100%; margin:10px 0 14px; font-size:14.5px; }
+  th, td { border:1px solid #cfd6e3; padding:6px 10px; text-align:left; vertical-align:top; }
+  th { background:#f1f4fa; }
+  code { background:#eef1f6; padding:1px 5px; border-radius:4px; font-size:.92em; }
+  .lead { color:#6b7385; margin-top:0; }
+  .red { color:#b3332b; font-weight:600; } .green { color:#2b7a4b; font-weight:600; }
+</style>
+</head>
+<body>
+<h1>Home Bakery Orders</h1>
+<p class="lead">An app for a home baker who takes cupcake and cake orders by Instagram DM. It shows which orders can be taken without breaking the rules, and tracks every order from request to pickup.</p>
+
+<h2>1. How to use it</h2>
+<ol>
+  <li>Double-click <code>Bakery-Tracker.html</code>. No server or internet is needed. It starts on <b>Monday 23 November</b> with the orders that were already booked (Kim, Ross, Ali, Diaz, Fox, Ng, Brown, Silva, Wong, Chen, Haddad, Moreau).</li>
+  <li>Press <b>Fetch</b> to read today's Instagram messages.
+    <ul>
+      <li>New orders that break no rule appear under <b>New requests</b>, with the pickup day's hours before and after. Press <b>Reject</b> on any you don't want.</li>
+      <li>Orders that break a rule appear under <b>Incompatible orders</b> with the reason.</li>
+      <li>Changes and cancellations appear in the <b>Changes and cancellations</b> box, marked Changed, Cancelled or Refused.</li>
+    </ul></li>
+  <li>If a day is full, press its <b>+4 h $100</b> button to book a helper. That day's limit becomes 12 hours, and any incompatible order that now fits moves back to New requests. The button only shows for days at least 2 days away.</li>
+  <li>Press <b>Accept all and go to next day</b>. All new requests are accepted, incompatible orders are rejected, changes and cancellations are applied, today's 5 PM pickups are marked as picked up, and the date moves on by one day.</li>
+  <li>Repeat each day. <b>Money: sales and helpers</b> shows sales picked up, sales still to pick up, helper cost, and sales minus helpers. <b>All orders</b> lists every order with its status.</li>
+</ol>
+<p>Everything is saved in the browser, so closing the page keeps your place. <b>Start over from Monday 23 November</b> resets everything.</p>
+
+<h2>Version 2: <code>Bakery-Tracker-v2.html</code></h2>
+<p>Same rules and same data, with a different screen built around the baker's two daily decisions: which orders to take, and whether a helper is worth $100.</p>
+<ul>
+  <li><b>Week strip on top:</b> today plus the next 6 days. Each day shows a bar with accepted hours (solid) and today's requested hours (striped), its orders, and its helper button.</li>
+  <li><b>One message list:</b> orders, changes and cancellations in the order they arrived, each with a clear verdict ("Can accept · $120", "Cannot accept", "Will cancel") and the reason.</li>
+  <li><b>Helper advice:</b> when an order doesn't fit for lack of hours, the app works out what a helper on that day would let you take, for example "Book a helper on Sat 28: take Singh (+$160) for $100". One click books it.</li>
+  <li><b>Undo reject:</b> a rejected request can be brought back before you go to the next day.</li>
+  <li><b>Money in the header:</b> sales, helper cost and net are always visible.</li>
+</ul>
+<p>The two versions save separately, so you can try both.</p>
+
+<h2>2. The rules</h2>
+<table>
+  <tr><th>Rule</th><th>Value</th></tr>
+  <tr><td>1 dozen cupcakes</td><td>$40, 30 minutes of oven time</td></tr>
+  <tr><td>1 cake</td><td>$120, 2 hours of oven time</td></tr>
+  <tr><td>Oven time per day</td><td>8 hours (12 with a helper). All baking happens on the pickup day. Pickup is at 5 PM.</td></tr>
+  <tr><td>Helper</td><td>$100 for one day, adds 4 hours</td></tr>
+  <tr><td>Notice</td><td>Orders, changes, cancellations and helper bookings need 2 days' notice. A message sent Monday can be for Wednesday or later.</td></tr>
+</table>
+
+<h2>3. State diagram (lifecycle of an order)</h2>
+<table>
+  <tr><th>From</th><th>Event</th><th>To</th></tr>
+  <tr><td>(new message)</td><td>Fetch: breaks no rule</td><td>Requested</td></tr>
+  <tr><td>(new message)</td><td>Fetch: less than 2 days' notice, or not enough hours left</td><td>Incompatible</td></tr>
+  <tr><td>Incompatible</td><td>Helper booked and the order now fits</td><td>Requested</td></tr>
+  <tr><td>Incompatible</td><td>Accept all and go to next day (automatic)</td><td>Rejected</td></tr>
+  <tr><td>Requested</td><td>Baker presses Reject</td><td>Rejected</td></tr>
+  <tr><td>Requested</td><td>Accept all and go to next day</td><td>Accepted, pending delivery</td></tr>
+  <tr><td>Accepted</td><td>A change with 2 days' notice that fits</td><td>Accepted (new quantity)</td></tr>
+  <tr><td>Accepted</td><td>A cancellation with 2 days' notice</td><td>Cancelled</td></tr>
+  <tr><td>Accepted</td><td>5 PM on its pickup day</td><td>Picked up</td></tr>
+</table>
+
+<h2>4. Actions: what each one checks and changes</h2>
+<table>
+  <tr><th>Action</th><th>Check</th><th>Edit</th></tr>
+  <tr><td>Fetch: new order</td><td>2 days' notice and enough hours left on the pickup day</td><td>Shown as Requested or Incompatible. Added to Orders when you go to the next day.</td></tr>
+  <tr><td>Fetch: a change</td><td>A matching accepted order (same name and pickup day), 2 days' notice, and enough hours with the new quantity in place of the old</td><td>Update the order's product and quantity in Orders. The day's hours change with it.</td></tr>
+  <tr><td>Fetch: cancellation</td><td>A matching accepted order and 2 days' notice</td><td>Set the order's status to Cancelled. Its hours are freed.</td></tr>
+  <tr><td>User rejects</td><td>None</td><td>The order's status becomes Rejected.</td></tr>
+  <tr><td>Accept all and go to next day</td><td>Each message, one by one in the order it arrived: still fits in the day's hours</td><td>Orders: status Accepted (or Rejected). Days: the accepted hours count toward that day. Today's accepted orders become Picked up. Today moves on 1 day.</td></tr>
+  <tr><td>Helper button</td><td>2 days' notice, and no helper already booked that day</td><td>In Days, record the helper as booked and set that day's hour limit to 12.</td></tr>
+</table>
+
+<h2>5. How the code is organised</h2>
+<ul>
+  <li><b>Data:</b> <code>state.orders</code> is the Orders table (name, product, quantity, pickup day, received day, status, note). <code>state.days</code> is the Days table: a day with a helper has <code>limit: 12</code>, otherwise the limit is 8. Booked hours are always added up from the Accepted orders, so they can never get out of step with the orders. <code>state.inbox</code> holds today's fetched messages, and <code>state.log</code> holds past changes and cancellations.</li>
+  <li><b>Back end</b> (between <code>BACK END</code> and <code>END BACK END</code>): <code>fetchToday</code>, <code>evaluate</code> (checks every message in arrival order), <code>rejectRequest</code>, <code>bookHelper</code>, <code>acceptAllAndNextDay</code>, <code>money</code>. These never touch the page.</li>
+  <li><b>Front end:</b> draws the page from <code>state</code> after every click, following the wireframe: today on the left, the next six days on the right with helper buttons, then changes and cancellations, money, and a list of all orders.</li>
+  <li><b>Messages:</b> the seven days of Instagram messages (from <code>InstagramOrders_Monday.html</code> to <code>InstagramOrders_Sunday.html</code>) are stored in the app, so Fetch works without a server.</li>
+</ul>
+
+<h2>6. Test: accepting all orders every day</h2>
+<p>The rules were tested in Node.js and by clicking through the page in a browser. On each day, Fetch was pressed, then Accept all and go to next day, with no helpers and no manual rejects.</p>
+<table>
+  <tr><th>Day</th><th>Message</th><th>Result</th></tr>
+  <tr><td>Mon 23</td><td>Jasmine 3 dozen (Wed), Patel 1 cake (Fri)</td><td class="green">Accepted</td></tr>
+  <tr><td>Mon 23</td><td>Okafor 2 dozen (Tue)</td><td class="red">Rejected: only 1 day's notice</td></tr>
+  <tr><td>Tue 24</td><td>Brown cancels (Thu)</td><td class="green">Cancelled, frees 1 h</td></tr>
+  <tr><td>Tue 24</td><td>Reyes 6 dozen (Thu), Tan 1 cake (Sat)</td><td class="green">Accepted</td></tr>
+  <tr><td>Tue 24</td><td>Park 3 dozen (Fri)</td><td class="red">Rejected: Friday would need 8.5 h</td></tr>
+  <tr><td>Wed 25</td><td>Moreau changes to 6 dozen (Sat)</td><td class="green">Changed</td></tr>
+  <tr><td>Wed 25</td><td>Singh 4 dozen (Sat)</td><td class="red">Rejected: Saturday would need 9 h</td></tr>
+  <tr><td>Wed 25</td><td>Kaur 1 cake (Sun), Lam 2 dozen (Fri)</td><td class="green">Accepted</td></tr>
+  <tr><td>Thu 26</td><td>Lam changes to 1 dozen (Fri)</td><td class="red">Refused: only 1 day's notice</td></tr>
+  <tr><td>Thu 26</td><td>Wilson 6 dozen, Bell 3 dozen (Sat)</td><td class="red">Rejected: not enough hours</td></tr>
+  <tr><td>Thu 26</td><td>Novak 2 dozen (Sat), Costa 2 dozen (Sun)</td><td class="green">Accepted</td></tr>
+  <tr><td>Fri 27</td><td>Adams 2 dozen (Sat)</td><td class="red">Rejected: only 1 day's notice</td></tr>
+  <tr><td>Fri 27</td><td>Costa cancels (Sun)</td><td class="green">Cancelled</td></tr>
+  <tr><td>Fri 27</td><td>Zhou 4 dozen (Sun), Gupta 1 cake (Mon)</td><td class="green">Accepted</td></tr>
+  <tr><td>Sat 28</td><td>Lee 4 dozen (Mon), Ito 1 cake (Tue)</td><td class="green">Accepted</td></tr>
+  <tr><td>Sat 28</td><td>Zhou changes to 2 dozen (Sun)</td><td class="red">Refused: only 1 day's notice</td></tr>
+  <tr><td>Sun 29</td><td>Lee cancels (Mon)</td><td class="red">Refused: only 1 day's notice</td></tr>
+  <tr><td>Sun 29</td><td>Nair 6 dozen (Tue)</td><td class="green">Accepted</td></tr>
+</table>
+<p>Result: no day goes over its hour limit, and total sales are $3,560 with no helpers. Saturday is the bottleneck. Singh, Wilson and Bell were turned away for lack of hours ($520 in sales), and Park was turned away on Friday ($120). Booking a Saturday helper in advance ($100) lets the baker take Singh and Wilson. Novak then no longer fits, so sales rise to $3,880 and sales minus helpers to $3,780, which is $220 better. Adding a Friday helper as well brings in Park, for $3,800 after both helpers.</p>
+<p>Other checks that passed: Fetch only works once a day. A helper can't be booked less than 2 days ahead. Booking a helper turns an incompatible order that now fits back into a request. A rejected request is saved as Rejected. Monday's pickups become Picked up. The Monday screen matches the wireframe.</p>
+</body>
+</html>

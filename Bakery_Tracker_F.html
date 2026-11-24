@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Home Bakery Orders</title>
+<style>
+  :root { --ink:#2a2118; --muted:#7c6f62; --line:#eadfce; --bg:#faf5ee; --brand:#9c4a25; --brand2:#c46a3c; --soft:#f4ebdf;
+          --green:#2f7a4f; --greenbg:#e5f3ea; --red:#b1352a; --redbg:#fbe8e5; --amber:#a86a0c; --amberbg:#fdf0d8; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+  header { background:var(--brand); color:#fff; padding:14px 24px; display:flex; align-items:center; gap:18px; flex-wrap:wrap; }
+  header h1 { margin:0; font-size:20px; font-weight:650; }
+  header .date { font-size:15px; opacity:.9; }
+  header .grow { flex:1; }
+  .kpis { display:flex; gap:18px; font-size:13px; }
+  .kpis div { text-align:right; } .kpis b { display:block; font-size:17px; }
+  button { font:inherit; cursor:pointer; border-radius:9px; border:1px solid var(--line); background:#fff; color:var(--ink); padding:7px 15px; }
+  button:disabled { opacity:.45; cursor:not-allowed; }
+  .hbtns button { border:1px solid rgba(255,255,255,.6); background:transparent; color:#fff; }
+  .hbtns button.go { background:#fff; color:var(--brand); border-color:#fff; font-weight:650; }
+  .hbtns { display:flex; gap:10px; }
+  main { max-width:1200px; margin:0 auto; padding:20px 24px 40px; }
+  h2 { font-size:16px; margin:0 0 10px; display:flex; align-items:baseline; gap:10px; }
+  h2 small { font-weight:400; color:var(--muted); font-size:13px; }
+
+  /* week strip */
+  .week { display:grid; grid-template-columns:repeat(7,1fr); gap:10px; margin-bottom:24px; }
+  @media (max-width:950px) { .week { grid-template-columns:repeat(4,1fr); } }
+  .day { background:#fff; border:1px solid var(--line); border-radius:11px; padding:10px; display:flex; flex-direction:column; min-height:220px; }
+  .day.today { border:2px solid var(--brand2); }
+  .day .hd { display:flex; justify-content:space-between; font-weight:650; }
+  .day .hd span { font-weight:400; font-size:12px; color:var(--muted); }
+  .meter { height:9px; border-radius:5px; background:var(--soft); margin:8px 0 3px; display:flex; overflow:hidden; }
+  .meter .a { background:var(--brand2); } .meter .r { background:repeating-linear-gradient(45deg,#e6b18f 0 4px,#f3d4bf 4px 8px); }
+  .meter.over .a { background:var(--red); }
+  .hrs { font-size:12.5px; color:var(--muted); margin-bottom:6px; }
+  .day ul { list-style:none; margin:0; padding:0; font-size:13px; flex:1; }
+  .day li { display:flex; justify-content:space-between; gap:4px; padding:2px 0; border-top:1px dotted var(--line); }
+  .day li span { color:var(--muted); }
+  .day li.new { color:var(--amber); }
+  .day .pick { font-size:12px; color:var(--brand); font-weight:600; margin:2px 0 4px; }
+  .day .help { margin-top:8px; font-size:12px; padding:4px 6px; width:100%; }
+  .day .help.on { background:var(--soft); border-color:var(--soft); color:var(--brand); cursor:default; }
+
+  /* inbox + side */
+  .cols { display:grid; grid-template-columns:1fr 340px; gap:22px; align-items:start; }
+  @media (max-width:950px) { .cols { grid-template-columns:1fr; } }
+  .card { background:#fff; border:1px solid var(--line); border-radius:11px; }
+  .msg { display:grid; grid-template-columns:auto 1fr auto; gap:4px 12px; padding:11px 14px; border-top:1px solid var(--line); align-items:start; }
+  .msg:first-child { border-top:0; }
+  .av { width:34px; height:34px; border-radius:50%; background:linear-gradient(135deg,#d0603a,#a83f73); color:#fff; display:grid; place-items:center; font-weight:650; grid-row:span 2; }
+  .msg .t { font-weight:600; }
+  .msg .t span { font-weight:400; color:var(--muted); }
+  .msg .why { grid-column:2 / 4; font-size:13px; color:var(--muted); }
+  .chip { font-size:12px; font-weight:650; border-radius:6px; padding:2px 8px; white-space:nowrap; }
+  .c-ok { background:var(--greenbg); color:var(--green); } .c-bad { background:var(--redbg); color:var(--red); } .c-off { background:#eee9e2; color:var(--muted); }
+  .act { grid-column:2 / 4; display:flex; gap:8px; flex-wrap:wrap; }
+  .act button { font-size:13px; padding:3px 11px; }
+  .tip { background:var(--amberbg); border:1px solid #f0d49b; color:#6e4a07; }
+  .empty { padding:18px 14px; color:var(--muted); }
+  .side .card { padding:12px 14px; margin-bottom:14px; }
+  .side h3 { margin:0 0 8px; font-size:14.5px; }
+  .line { display:flex; justify-content:space-between; font-size:14px; padding:2px 0; }
+  .line.tot { border-top:1px solid var(--line); margin-top:4px; padding-top:5px; font-weight:650; }
+  .log { font-size:13px; padding:4px 0; border-top:1px dotted var(--line); }
+  .log:first-of-type { border-top:0; }
+  .muted { color:var(--muted); }
+  details summary { cursor:pointer; font-weight:600; font-size:14.5px; }
+  table { border-collapse:collapse; width:100%; font-size:13px; margin-top:8px; }
+  td, th { padding:3px 4px; border-bottom:1px solid var(--line); text-align:left; }
+  th { color:var(--muted); font-weight:600; }
+  .reset { border:0; background:none; color:var(--muted); text-decoration:underline; padding:0; font-size:13px; }
+</style>
+</head>
+<body>
+<header>
+  <div><h1>Home Bakery Orders</h1><div class="date" id="date"></div></div>
+  <div class="grow"></div>
+  <div class="kpis" id="kpis"></div>
+  <div class="hbtns">
+    <button id="fetchBtn" data-act="fetch">Fetch messages</button>
+    <button class="go" data-act="acceptAll">Accept all and go to next day →</button>
+  </div>
+</header>
+
+<main>
+  <h2>This week <small>Solid bar = accepted, striped = requested today. Helpers need 2 days' notice.</small></h2>
+  <div class="week" id="week"></div>
+
+  <div class="cols">
+    <section>
+      <h2>Today's messages <small id="inboxNote"></small></h2>
+      <div class="card" id="inbox"></div>
+    </section>
+    <aside class="side">
+      <div class="card"><h3>Money</h3><div id="money"></div></div>
+      <div class="card"><h3>Changes and cancellations</h3><div id="changes"></div></div>
+      <div class="card"><details><summary id="allTitle">All orders</summary><div id="all"></div></details></div>
+      <button class="reset" data-act="restart">Start over from Monday 23 November</button>
+    </aside>
+  </div>
+</main>
+
+<script>
+// ===== BACK END: data + rules (no page code here) =====
+const PRODUCTS = { cupcakes: { price: 40, hours: 0.5, unit: 'dozen' }, cake: { price: 120, hours: 2, unit: 'cake' } };
+const BASE_LIMIT = 8, HELPER_LIMIT = 12, HELPER_COST = 100, NOTICE = 2;
+const START_DAY = '2026-11-23';
+
+// Orders already accepted before Monday (from the wireframe)
+const START_ORDERS = [
+  ['Kim', 'cupcakes', 4, '2026-11-23'], ['Ross', 'cake', 1, '2026-11-23'],
+  ['Ali', 'cupcakes', 6, '2026-11-24'], ['Diaz', 'cake', 1, '2026-11-24'],
+  ['Fox', 'cupcakes', 4, '2026-11-25'],
+  ['Ng', 'cupcakes', 6, '2026-11-26'], ['Brown', 'cupcakes', 2, '2026-11-26'], ['Silva', 'cake', 1, '2026-11-26'],
+  ['Wong', 'cake', 1, '2026-11-27'], ['Chen', 'cupcakes', 6, '2026-11-27'],
+  ['Haddad', 'cake', 1, '2026-11-28'], ['Moreau', 'cupcakes', 4, '2026-11-28']
+];
+
+// Instagram messages, from InstagramOrders_Monday.html ... InstagramOrders_Sunday.html
+// [day received, name, kind, product, qty, pickup]
+const INSTAGRAM = [
+  ['2026-11-23', 'Jasmine', 'order', 'cupcakes', 3, '2026-11-25'], ['2026-11-23', 'Okafor', 'order', 'cupcakes', 2, '2026-11-24'], ['2026-11-23', 'Patel', 'order', 'cake', 1, '2026-11-27'],
+  ['2026-11-24', 'Brown', 'cancel', null, 0, '2026-11-26'], ['2026-11-24', 'Reyes', 'order', 'cupcakes', 6, '2026-11-26'], ['2026-11-24', 'Tan', 'order', 'cake', 1, '2026-11-28'], ['2026-11-24', 'Park', 'order', 'cupcakes', 3, '2026-11-27'],
+  ['2026-11-25', 'Moreau', 'change', 'cupcakes', 6, '2026-11-28'], ['2026-11-25', 'Singh', 'order', 'cupcakes', 4, '2026-11-28'], ['2026-11-25', 'Kaur', 'order', 'cake', 1, '2026-11-29'], ['2026-11-25', 'Lam', 'order', 'cupcakes', 2, '2026-11-27'],
+  ['2026-11-26', 'Lam', 'change', 'cupcakes', 1, '2026-11-27'], ['2026-11-26', 'Wilson', 'order', 'cupcakes', 6, '2026-11-28'], ['2026-11-26', 'Novak', 'order', 'cupcakes', 2, '2026-11-28'], ['2026-11-26', 'Bell', 'order', 'cupcakes', 3, '2026-11-28'], ['2026-11-26', 'Costa', 'order', 'cupcakes', 2, '2026-11-29'],
+  ['2026-11-27', 'Adams', 'order', 'cupcakes', 2, '2026-11-28'], ['2026-11-27', 'Costa', 'cancel', null, 0, '2026-11-29'], ['2026-11-27', 'Zhou', 'order', 'cupcakes', 4, '2026-11-29'], ['2026-11-27', 'Gupta', 'order', 'cake', 1, '2026-11-30'],
+  ['2026-11-28', 'Lee', 'order', 'cupcakes', 4, '2026-11-30'], ['2026-11-28', 'Zhou', 'change', 'cupcakes', 2, '2026-11-29'], ['2026-11-28', 'Ito', 'order', 'cake', 1, '2026-12-01'],
+  ['2026-11-29', 'Lee', 'cancel', null, 0, '2026-11-30'], ['2026-11-29', 'Nair', 'order', 'cupcakes', 6, '2026-12-01']
+];
+
+// ---- dates ----
+function dayNum(s) { const [y, m, d] = s.split('-').map(Number); return Date.UTC(y, m - 1, d) / 86400000; }
+function addDays(s, n) { return new Date((dayNum(s) + n) * 86400000).toISOString().slice(0, 10); }
+function gap(from, to) { return dayNum(to) - dayNum(from); }
+function dayLabel(s, opts) { return new Date(dayNum(s) * 86400000).toLocaleDateString('en-US', Object.assign({ timeZone: 'UTC' }, opts)); }
+function shortDay(s) { return dayLabel(s, { weekday: 'short' }) + ' ' + Number(s.slice(8)); }      // "Tue 24"
+function longDay(s) { return dayLabel(s, { weekday: 'long' }) + ' ' + Number(s.slice(8)) + ' ' + dayLabel(s, { month: 'long' }); }
+
+// ---- products ----
+function hoursOf(o) { return PRODUCTS[o.product].hours * o.qty; }
+function priceOf(o) { return PRODUCTS[o.product].price * o.qty; }
+function what(o) { return o.product === 'cake' ? (o.qty === 1 ? '1 cake' : o.qty + ' cakes') : o.qty + ' dozen cupcakes'; }
+function fmtH(h) { return (Math.round(h * 10) / 10) + ' h'; }
+
+// ---- the two tables ----
+function newState() {
+  let n = 0;
+  return {
+    today: START_DAY,
+    fetched: false,
+    nextId: 1000,
+    orders: START_ORDERS.map(a => ({ id: ++n, name: a[0], product: a[1], qty: a[2], pickup: a[3], received: null, status: 'Accepted', note: 'booked before Monday' })),
+    days: {},          // date -> { limit: 12 } when a helper is booked
+    inbox: [],         // today's fetched messages
+    log: []            // changes and cancellations, with the result
+  };
+}
+function limitOf(state, date) { return (state.days[date] && state.days[date].limit) || BASE_LIMIT; }
+function hasHelper(state, date) { return limitOf(state, date) > BASE_LIMIT; }
+function booked(state, date) {
+  return state.orders.filter(o => o.pickup === date && o.status === 'Accepted').reduce((s, o) => s + hoursOf(o), 0);
+}
+function findAccepted(state, name, pickup) {
+  return state.orders.find(o => o.status === 'Accepted' && o.pickup === pickup && o.name.toLowerCase() === name.toLowerCase());
+}
+
+// ---- Fetch: today's messages go into the inbox ----
+function fetchToday(state) {
+  if (state.fetched) return 0;
+  state.inbox = INSTAGRAM.filter(m => m[0] === state.today).map(m => ({
+    id: ++state.nextId, received: m[0], name: m[1], kind: m[2], product: m[3], qty: m[4], pickup: m[5], rejected: false
+  }));
+  state.fetched = true;
+  return state.inbox.length;
+}
+
+// ---- Check every inbox message, in the order it arrived ----
+// New orders: Requested or Incompatible.  Changes/cancellations: ok or refused.
+// Uses the hours of accepted orders plus the messages above it that pass.
+function evaluate(state) {
+  const extra = {};                       // date -> hours added (or freed) by messages that pass
+  const hoursOn = d => booked(state, d) + (extra[d] || 0);
+  return state.inbox.map(m => {
+    const r = { msg: m, ok: true, reason: '' };
+    const notice = gap(m.received, m.pickup);
+    const target = m.kind === 'order' ? null : findAccepted(state, m.name, m.pickup);
+    r.target = target;
+    if (m.kind === 'order' && m.rejected) { r.ok = false; r.reason = 'rejected by the baker'; return r; }
+    if (m.kind !== 'order' && !target) { r.ok = false; r.reason = 'no accepted order from ' + m.name + ' for ' + shortDay(m.pickup); return r; }
+    if (notice < NOTICE) { r.ok = false; r.reason = 'only ' + notice + " day's notice"; return r; }
+    if (m.kind === 'cancel') { extra[m.pickup] = (extra[m.pickup] || 0) - hoursOf(target); r.reason = 'frees ' + fmtH(hoursOf(target)); return r; }
+    const add = hoursOf(m) - (target ? hoursOf(target) : 0);
+    const after = hoursOn(m.pickup) + add, limit = limitOf(state, m.pickup);
+    r.after = after; r.limit = limit;
+    if (after > limit) { r.ok = false; r.reason = 'not enough hours: ' + fmtH(after) + ' of ' + fmtH(limit); return r; }
+    extra[m.pickup] = (extra[m.pickup] || 0) + add;
+    r.reason = shortDay(m.pickup) + ': ' + fmtH(hoursOn(m.pickup) - add) + ' booked, ' + fmtH(after) + ' with this';
+    return r;
+  });
+}
+function statusOf(r) {          // state-diagram name for an inbox message
+  if (r.msg.kind === 'order') return r.msg.rejected ? 'Rejected' : r.ok ? 'Requested' : 'Incompatible';
+  return r.ok ? 'Will apply' : 'Refused';
+}
+
+// ---- Reject (only for Requested orders) ----
+function rejectRequest(state, id) {
+  const m = state.inbox.find(x => x.id === id && x.kind === 'order');
+  if (!m) return false;
+  m.rejected = true;
+  return true;
+}
+
+// ---- Helper button ----
+function canBookHelper(state, date) { return !hasHelper(state, date) && gap(state.today, date) >= NOTICE; }
+function bookHelper(state, date) {
+  if (!canBookHelper(state, date)) return false;
+  state.days[date] = { limit: HELPER_LIMIT };
+  return true;
+}
+
+// ---- Accept all and go to next day ----
+function acceptAllAndNextDay(state) {
+  for (const r of evaluate(state)) {
+    const m = r.msg;
+    if (m.kind === 'order') {
+      state.orders.push({ id: m.id, name: m.name, product: m.product, qty: m.qty, pickup: m.pickup, received: m.received,
+        status: r.ok ? 'Accepted' : 'Rejected', note: r.ok ? '' : r.reason });
+    } else {
+      if (r.ok && m.kind === 'cancel') { r.target.status = 'Cancelled'; r.target.note = 'cancelled on ' + shortDay(m.received); }
+      if (r.ok && m.kind === 'change') { r.target.note = 'changed from ' + what(r.target) + ' on ' + shortDay(m.received); r.target.product = m.product; r.target.qty = m.qty; }
+      state.log.push({ received: m.received, name: m.name, kind: m.kind, product: m.product, qty: m.qty, pickup: m.pickup, ok: r.ok, reason: r.reason });
+    }
+  }
+  // 5 PM: today's accepted orders are picked up
+  state.orders.forEach(o => { if (o.pickup === state.today && o.status === 'Accepted') o.status = 'Picked up'; });
+  state.inbox = [];
+  state.fetched = false;
+  state.today = addDays(state.today, 1);
+}
+
+// ---- Money ----
+function money(state) {
+  const sales = state.orders.filter(o => o.status === 'Accepted' || o.status === 'Picked up').reduce((s, o) => s + priceOf(o), 0);
+  const helpers = Object.keys(state.days).filter(d => hasHelper(state, d)).length;
+  return { sales, helpers, helperCost: helpers * HELPER_COST, net: sales - helpers * HELPER_COST };
+}
+// ===== END BACK END =====
+
+
+// ===== FRONT END (version 2) =====
+const KEY = 'homeBakeryOrders.v2b';
+let state;
+try { state = JSON.parse(localStorage.getItem(KEY)); } catch (e) { state = null; }
+if (!state || !state.orders) state = newState();
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const usd = n => '$' + n.toLocaleString('en-US');
+const short = o => o.product === 'cake' ? what(o) : o.qty + ' dz';
+
+// What would a helper on this day bring in today? (orders that would move from Incompatible to Requested)
+function helperGain(date) {
+  if (!canBookHelper(state, date)) return null;
+  const before = evaluate(state);
+  const copy = JSON.parse(JSON.stringify(state));
+  bookHelper(copy, date);
+  const after = evaluate(copy);
+  const won = after.filter((r, i) => r.msg.kind === 'order' && r.ok && !before[i].ok);
+  if (!won.length) return null;
+  return { names: won.map(r => r.msg.name), sales: won.reduce((s, r) => s + priceOf(r.msg), 0) };
+}
+
+function renderHeader() {
+  $('date').textContent = 'Today: ' + longDay(state.today);
+  $('fetchBtn').disabled = state.fetched;
+  const m = money(state);
+  $('kpis').innerHTML = '<div>Sales<b>' + usd(m.sales) + '</b></div><div>Helpers<b>−' + usd(m.helperCost) + '</b></div><div>Net<b>' + usd(m.net) + '</b></div>';
+}
+
+function renderWeek(results) {
+  const req = {};
+  results.filter(r => r.msg.kind === 'order' && r.ok).forEach(r => (req[r.msg.pickup] = req[r.msg.pickup] || []).push(r.msg));
+  let h = '';
+  for (let i = 0; i < 7; i++) {
+    const d = addDays(state.today, i), lim = limitOf(state, d), b = booked(state, d);
+    const reqH = (req[d] || []).reduce((s, m) => s + hoursOf(m), 0);
+    const list = state.orders.filter(o => o.pickup === d && o.status === 'Accepted').sort((x, y) => x.name.localeCompare(y.name));
+    h += '<div class="day' + (i === 0 ? ' today' : '') + '"><div class="hd">' + shortDay(d) + '<span>' + (i === 0 ? 'today' : i === 1 ? 'tomorrow' : 'in ' + i + ' days') + '</span></div>' +
+      '<div class="meter' + (b > lim ? ' over' : '') + '"><div class="a" style="width:' + Math.min(100, b / lim * 100) + '%"></div><div class="r" style="width:' + Math.min(100 - b / lim * 100, reqH / lim * 100) + '%"></div></div>' +
+      '<div class="hrs">' + fmtH(b + reqH) + ' of ' + lim + ' h' + (hasHelper(state, d) ? ' (helper)' : '') + '</div>' +
+      (i === 0 && list.length ? '<div class="pick">Pickup at 5 PM</div>' : '') +
+      '<ul>' + list.map(o => '<li>' + esc(o.name) + '<span>' + short(o) + '</span></li>').join('') +
+      (req[d] || []).map(m => '<li class="new">+ ' + esc(m.name) + '<span>' + short(m) + '</span></li>').join('') +
+      (!list.length && !req[d] ? '<li class="muted" style="border:0">No orders</li>' : '') + '</ul>';
+    if (hasHelper(state, d)) h += '<button class="help on" disabled>Helper booked</button>';
+    else if (canBookHelper(state, d)) h += '<button class="help" data-act="helper" data-date="' + d + '">+4 h helper · $100</button>';
+    h += '</div>';
+  }
+  $('week').innerHTML = h;
+}
+
+function renderInbox(results) {
+  if (!state.fetched) { $('inbox').innerHTML = '<div class="empty">Press <b>Fetch messages</b> to read today\'s Instagram DMs.</div>'; $('inboxNote').textContent = ''; return; }
+  if (!results.length) { $('inbox').innerHTML = '<div class="empty">No new messages today.</div>'; $('inboxNote').textContent = ''; return; }
+  const ok = results.filter(r => r.ok).length;
+  $('inboxNote').textContent = ok + ' of ' + results.length + ' will go through when you go to the next day';
+  const tipShown = {};
+  $('inbox').innerHTML = results.map(r => {
+    const m = r.msg, st = statusOf(r);
+    const text = m.kind === 'order' ? what(m) : m.kind === 'cancel' ? 'Cancel order' : 'Change to ' + what(m);
+    const chip = st === 'Requested' ? ['c-ok', 'Can accept · ' + usd(priceOf(m))] : st === 'Will apply' ? ['c-ok', m.kind === 'cancel' ? 'Will cancel' : 'Will change']
+      : st === 'Rejected' ? ['c-off', 'Rejected by you'] : ['c-bad', st === 'Refused' ? 'Cannot apply' : 'Cannot accept'];
+    let act = '';
+    if (st === 'Requested') act = '<button data-act="reject" data-id="' + m.id + '">Reject</button>';
+    if (st === 'Rejected') act = '<button data-act="undo" data-id="' + m.id + '">Undo reject</button>';
+    if (st === 'Incompatible' && /hours/.test(r.reason) && !tipShown[m.pickup]) {
+      const g = helperGain(m.pickup);
+      if (g) { tipShown[m.pickup] = 1; act = '<button class="tip" data-act="helper" data-date="' + m.pickup + '">Book a helper on ' + shortDay(m.pickup) + ': take ' + g.names.join(', ') + ' (+' + usd(g.sales) + ') for $100</button>'; }
+    }
+    return '<div class="msg"><div class="av">' + esc(m.name[0]) + '</div>' +
+      '<div class="t">' + esc(m.name) + ' <span>· ' + text + ' · pickup ' + shortDay(m.pickup) + '</span></div>' +
+      '<span class="chip ' + chip[0] + '">' + chip[1] + '</span>' +
+      '<div class="why">' + esc(r.reason) + '</div>' + (act ? '<div class="act">' + act + '</div>' : '') + '</div>';
+  }).join('');
+}
+
+function renderSide() {
+  const m = money(state);
+  const picked = state.orders.filter(o => o.status === 'Picked up').reduce((s, o) => s + priceOf(o), 0);
+  $('money').innerHTML = '<div class="line"><span>Picked up</span><b>' + usd(picked) + '</b></div>' +
+    '<div class="line"><span>Still to pick up</span><b>' + usd(m.sales - picked) + '</b></div>' +
+    '<div class="line"><span>Helpers (' + m.helpers + ')</span><b>−' + usd(m.helperCost) + '</b></div>' +
+    '<div class="line tot"><span>Sales minus helpers</span><b>' + usd(m.net) + '</b></div>';
+  $('changes').innerHTML = state.log.length ? state.log.slice().reverse().map(l =>
+    '<div class="log"><b>' + esc(l.name) + '</b> ' + (l.kind === 'cancel' ? 'cancel' : 'change to ' + what(l)) + ', ' + shortDay(l.pickup) +
+    ' <span class="chip ' + (l.ok ? 'c-ok' : 'c-bad') + '">' + (l.ok ? 'Done' : 'Refused') + '</span><div class="muted">' + shortDay(l.received) + ': ' + esc(l.reason) + '</div></div>').join('')
+    : '<div class="muted" style="font-size:13px">None yet</div>';
+  const rank = { 'Accepted': 0, 'Picked up': 1, 'Cancelled': 2, 'Rejected': 3 };
+  const list = state.orders.slice().sort((a, b) => a.pickup.localeCompare(b.pickup) || rank[a.status] - rank[b.status]);
+  $('allTitle').textContent = 'All orders (' + list.length + ')';
+  $('all').innerHTML = '<table><tr><th>Pickup</th><th>Name</th><th>Order</th><th>Status</th></tr>' + list.map(o =>
+    '<tr><td>' + shortDay(o.pickup) + '</td><td>' + esc(o.name) + '</td><td>' + short(o) + '</td><td>' + o.status + '</td></tr>').join('') + '</table>';
+}
+
+function render() {
+  const results = evaluate(state);
+  renderHeader(); renderWeek(results); renderInbox(results); renderSide();
+  try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {}
+}
+
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-act]');
+  if (!b || b.disabled) return;
+  const a = b.dataset.act;
+  if (a === 'fetch') fetchToday(state);
+  else if (a === 'reject') rejectRequest(state, +b.dataset.id);
+  else if (a === 'undo') { const m = state.inbox.find(x => x.id === +b.dataset.id); if (m) m.rejected = false; }
+  else if (a === 'helper') { if (confirm('Book a helper on ' + shortDay(b.dataset.date) + ' for $100? It adds 4 oven hours and cannot be undone.')) bookHelper(state, b.dataset.date); }
+  else if (a === 'acceptAll') { if (!state.fetched && !confirm("Today's messages have not been fetched. Go to the next day anyway?")) return; acceptAllAndNextDay(state); }
+  else if (a === 'restart') { if (confirm('Delete everything and start again from Monday 23 November?')) state = newState(); }
+  render();
+});
+render();
+</script>
+</body>
+</html>
